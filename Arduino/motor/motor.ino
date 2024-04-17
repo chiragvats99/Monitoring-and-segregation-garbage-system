@@ -1,26 +1,23 @@
 #include <Servo.h>
 
-Servo servo; // Define servo object
-
-int servoPin = 9; // Pin connected to servo
-int state = 0; // Variable to store incoming state
+Servo servo;
+int servoPin = 9;
+int angle = 90; // initial position of servo
 
 void setup() {
-  servo.attach(servoPin); // Attach servo to pin 9
-  Serial.begin(9600); // Start serial communication
+  servo.attach(servoPin);
+  Serial.begin(9600);
 }
 
 void loop() {
   if (Serial.available() > 0) {
-    state = Serial.parseInt(); // Read incoming state
-    if (state != 0) { // If state is valid
-      moveServo(state); // Call function to move servo
+    char command = Serial.read();
+    if (command == 'o') { // 'o' for open
+      angle = 180;
+    } else if (command == 'c') { // 'c' for close
+      angle = 90;
     }
+    servo.write(angle);
+    delay(1000); // adjust delay as needed
   }
-}
-
-void moveServo(int angle) {
-  angle = constrain(angle, 0, 180); // Limit angle between 0 and 180
-  servo.write(angle); // Move servo to specified angle
-  delay(15); // Delay for servo to reach position
 }

@@ -2,6 +2,7 @@ import vosk
 import pyttsx3
 import pyaudio
 import serial
+import json
 from time import sleep
 
 # Initialize the Vosk model
@@ -13,7 +14,7 @@ model = vosk.Model(model_path)
 engine = pyttsx3.init()
 
 # Initialize serial communication with Arduino
-ser = serial.Serial('COM3', 9600)  # Change 'COM3' to the correct port for your Arduino
+ser = serial.Serial('COM10', 9600)  # Change 'COM3' to the correct port for your Arduino
 
 def speak(text):
     engine.say(text)
@@ -66,12 +67,29 @@ def process_query(query):
         ser.write(b'o')  # Send 'o' command to Arduino to open the bin
         sleep(2)  # Wait for the servo to rotate
         return "Opening the bin."
-    elif "close" in query:
+    elif "shut" in query:
         ser.write(b'c')  # Send 'c' command to Arduino to close the bin
         sleep(2)  # Wait for the servo to rotate
         return "Closing the bin."
+    elif "level" in query:
+        # Request status from Arduino for wet waste bin
+        ser.write(b's')  # Send 's' command to Arduino to request status
+        sleep(2)  # Wait for Arduino to respond
+        # Read status from Arduino for wet waste bin
+        status_wet = ser.readline().decode().strip()
+        
+        # Request status from Arduino for dry waste bin
+        ser.write(b's')  # Send 's' command to Arduino to request status
+        sleep(2)  # Wait for Arduino to respond
+        # Read status from Arduino for dry waste bin
+        status_dry = ser.readline().decode().strip()
+        
+        return f"Wet waste bin status: {status_wet}, Dry waste bin status: {status_dry}"
+    elif query.strip() == "":
+        return ""  # Return nothing if query is empty
     else:
-        return "I'm sorry, I didn't understand that."
+        return "Sorry, I didn't understand that."  # Return message for unrecognized speech
+
 
 def main():
     speak("Hello! I'm your voice assistant. How can I help you today?")

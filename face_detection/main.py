@@ -2,11 +2,8 @@ import cv2
 import cvlib as cv
 from cvlib.object_detection import draw_bbox
 import serial
-
-
-# Function to rotate servo motor to a specified angle
-def rotate_servo(ser, angle):
-    ser.write(str(angle).encode())  # Send angle to Arduino
+from time import time
+from time import sleep
 
 # Try different camera indices (0, 1, 2, etc.) to access different cameras if available
 video = cv2.VideoCapture(0)
@@ -18,6 +15,9 @@ if not video.isOpened():
 
 # Initialize serial connection (change port and baudrate as needed)
 ser = serial.Serial('COM10', 9600)  # Change 'COM6' to your Arduino's port
+
+# Initialize a variable to store the time when an animal was last detected
+last_detection_time = 0
 
 while True:
     ret, frame = video.read()
@@ -33,10 +33,15 @@ while True:
     # Check if any animal is detected
     if "dog" in label or "cat" in label:  # Add more animal labels if needed
         print("Animal detected")
-        rotate_servo(ser, 180)  # Rotate servo motor to 180 degrees
+        ser.write(b'l') 
+        sleep(2) # Rotate servo motor to 180 degrees
+        last_detection_time = time()  # Update the time of last detection
     else:
         print("No animal detected")
-        rotate_servo(ser,1)
+        # Check if 2 minutes have passed since the last detection
+        if time() - last_detection_time > 20:
+            ser.write(b'u') 
+            sleep(2) # Rotate servo motor to 0 degrees
 
     output_image = draw_bbox(frame, bbox, label, conf)
 

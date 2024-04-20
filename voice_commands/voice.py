@@ -2,8 +2,17 @@ import vosk
 import pyttsx3
 import pyaudio
 import serial
+import firebase_admin
+from firebase_admin import storage
 import json
 from time import sleep
+
+# Initialize Firebase
+cred = credentials.Certificate("vehicle-type-recognition-sys-firebase-adminsdk-kid7m-35c0a64ce8.json")
+firebase_admin.initialize_app(cred, {
+    'storageBucket': "vehicle-type-recognition-sys.appspot.com"
+})
+bucket = storage.bucket()
 
 # Initialize the Vosk model
 model_path = "voice_commands/vosk-model-en-in-0.5"
@@ -66,11 +75,11 @@ def process_query(query):
     if "open" in query:
         ser.write(b'o')  # Send 'o' command to Arduino to open the bin
         sleep(2)  # Wait for the servo to rotate
-        return "Opening the bin."
+        response = "Opening the bin."
     elif "shut" in query:
         ser.write(b'c')  # Send 'c' command to Arduino to close the bin
         sleep(2)  # Wait for the servo to rotate
-        return "Closing the bin."
+        response = "Closing the bin."
     elif "level" in query:
         # Request status from Arduino for wet waste bin
         ser.write(b's')  # Send 's' command to Arduino to request status
@@ -84,11 +93,21 @@ def process_query(query):
         # Read status from Arduino for dry waste bin
         status_dry = ser.readline().decode().strip()
         
-        return f"Wet waste bin status: {status_wet}, Dry waste bin status: {status_dry}"
+        response = f"Wet waste bin status: {status_wet}, Dry waste bin status: {status_dry}"
     elif query.strip() == "":
-        return ""  # Return nothing if query is empty
+        response = ""  # Return nothing if query is empty
     else:
-        return "Sorry, I didn't understand that."  # Return message for unrecognized speech
+        response = "Sorry, I didn't understand that."  # Return message for unrecognized speech
+
+    # Write response to Firebase Storage
+    blob = bucket.blob('responses/response.txt')
+    blob.upload_from_string(response)
+
+    # Write response to local text file
+    with open('response.txt', 'w') as f:
+        f.write(response)
+
+    return response
 
 
 def main():
